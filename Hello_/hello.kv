@@ -1,0 +1,15 @@
+<MainScreen>:
+    orientation: "vertical"
+
+    Label:
+        id: MsgLbl
+        text: ""
+
+    TextInput:
+        id: NameInput
+        hint_text: "Name"
+        multiline: False
+
+    Button:
+        text: "Say Hello"
+        on_press: root.say_hello()

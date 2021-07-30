@@ -1,0 +1,89 @@
+<ConfirmDialog>:
+    BoxLayout:
+        orientation: "vertical"
+
+        Label:
+            id: Message
+            text: ""
+
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: .125
+
+            Button:
+                id: Yes
+                text: "Yes"
+                on_press: self.parent.parent.parent.confirm()
+
+            Button:
+                id: No
+                text: "No"
+                on_press: self.parent.parent.parent.cancel()
+
+
+<FileDialog>:
+    filename: Filename
+    files: Files
+    confirm_btn: ConfirmButton
+    cancel_btn: CancelButton
+
+    BoxLayout:
+        orientation: "vertical"
+
+        TextInput:
+            id: Filename
+            text: ""
+            hint_text: "Filename"
+            multiline: False
+            size_hint_y: .0625
+            use_bubble: True
+
+        FileChooserListView:
+            id: Files
+
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: .125
+
+            Button:
+                id: ConfirmButton
+                text: "Open"
+                on_press: self.parent.parent.parent.confirm()
+
+            Button:
+                id: CancelButton
+                text: "Cancel"
+                on_press: self.parent.parent.parent.cancel()
+
+
+<MainScreen>:
+    orientation: "vertical"
+    document: Document
+
+    ActionBar:
+        ActionView:
+            ActionPrevious:
+                title: "Notebook"
+                on_press: root.document.do_undo()
+
+            ActionButton:
+                icon: "./data/icons/new.png"
+                on_press: root.prep_new()
+
+            ActionButton:
+                icon: "./data/icons/open.png"
+                on_press: root.prep_open()
+
+            ActionButton:
+                icon: "./data/icons/save.png"
+                on_press: root.prep_save()
+
+    TextInput:
+        id: Document
+        font_size: dp(18)
+        use_bubble: True
+        on_focus: root.adjust_layout(*args)
+
+    Widget:
+        id: Filler
+        size_hint_y: .0001

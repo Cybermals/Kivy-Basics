@@ -1,0 +1,550 @@
+Lesson 5: ActionBar and ModalView
+=================================
+
+ In this lesson, we are going to create a working text editor. This task will be
+a bit more complex, but if we break it down into smaller bits it will be easier
+to understand. Let's start by taking a look at our new kv file. It has 3 rules
+this time:
+
+<ConfirmDialog>:
+    ...
+
+
+<FileDialog>:
+    ...
+
+
+<MainScreen>:
+    ...
+
+ I have omitted the contents of each rule for clarity. The "ConfirmDialog" rule
+will be for a dialog box that has a message, a "Yes" button, and a "No" button.
+The "FileDialog" rule will be for a dialog box that has a text input, a file
+chooser, and 2 buttons for confirm and cancel. And the "MainScreen" rule will be
+for the main screen of our app.
+
+ Remember, each rule needs a separate class. Which is why our new code has 3
+classes:
+
+class ConfirmDialog(ModalView):
+    ...
+
+
+class FileDialog(ModalView):
+    ...
+
+
+class MainScreen(BoxLayout):
+    ...
+
+ Notice that our 2 dialogs are based on a "ModalView" widget. That particular
+widget is used to create a dialog box that covers the other widgets until it is
+dismissed. Since the confirm dialog is the simplest, we will take a closer look
+at it first:
+
+<ConfirmDialog>:
+    BoxLayout:
+        orientation: "vertical"
+
+        Label:
+            id: Message
+            text: ""
+
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: .125
+
+            Button:
+                id: Yes
+                text: "Yes"
+                on_press: self.parent.parent.parent.confirm()
+
+            Button:
+                id: No
+                text: "No"
+                on_press: self.parent.parent.parent.cancel()
+
+ Most of this should look familiar by now. The confirm dialog contains a vertical
+box layout with a message label and a horizontal box layout. The horizontal box
+layout contains 2 buttons "Yes" and "No". However, I bet you are wondering what
+this weird looking "self.parent.parent.parent.confirm()" thingie is. If you take
+a look at our code, you can see that our confirm dialog has 2 methods called
+"confirm" and "cancel":
+
+class ConfirmDialog(ModalView):
+    """A confirmation dialog."""
+    def __init__(self, **kwargs):
+        """Setup this confirmation dialog."""
+        super(ConfirmDialog, self).__init__()
+
+        if "msg" in kwargs:
+            self.ids["Message"].text = kwargs["msg"]
+
+        if "on_confirm" in kwargs:
+            self.ids["Yes"].bind(on_press = kwargs["on_confirm"])
+        
+        if "on_cancel" in kwargs:
+            self.ids["No"].bind(on_press = kwargs["on_cancel"])
+
+    def confirm(self):
+        """Confirm the pending operation."""
+        self.dismiss()
+
+    def cancel(self):
+        """Cancel the pending operation."""
+        self.dismiss()
+
+ However, inside a button widget "self" refers to the button. But the "parent"
+property of a widget contains a reference to the widget that contains the given
+widget. Since the button is inside a widget that is inside another widget and so
+on, we need the parent of the parent of the parent widget. Both the "confirm"
+and "cancel" method just dismiss the dialog, however we have setup our 
+constructor so that it can take 3 different keyword arguments that affect its
+behavior: "msg" is the message to display, "on_confirm" is a function to call
+when the confirm button is clicked, and "on_cancel" is a function to call when
+the cancel button is clicked. As you can see, the constructor simply checks for
+each keyword arg and if it is present it executes the appropriate code. Did you
+notice the "bind" method calls? The "bind" method of a widget assigns a method
+to an event. That way the method will get called when the event fires.
+
+ Now let's take a look at our file dialog:
+
+<FileDialog>:
+    filename: Filename
+    files: Files
+    confirm_btn: ConfirmButton
+    cancel_btn: CancelButton
+
+    BoxLayout:
+        orientation: "vertical"
+
+        TextInput:
+            id: Filename
+            text: ""
+            hint_text: "Filename"
+            multiline: False
+            size_hint_y: .0625
+            use_bubble: True
+
+        FileChooserListView:
+            id: Files
+
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: .125
+
+            Button:
+                id: ConfirmButton
+                text: "Open"
+                on_press: self.parent.parent.parent.confirm()
+
+            Button:
+                id: CancelButton
+                text: "Cancel"
+                on_press: self.parent.parent.parent.cancel()
+
+ This dialog is a bit more complex. There's a new widget in it called a
+"FileChooser". That particular widget displays a list of files and folders in the 
+currently selected directory. There are actually 3 different variations of this
+widget. The list-based one, the icon-based one, and the one that can change 
+views. Now let's look at the class for this dialog:
+
+class FileDialog(ModalView):
+    """A file dialog."""
+    def __init__(self, **kwargs):
+        """Setup this file dialog."""
+        super(FileDialog, self).__init__()
+        self.on_confirm = None
+        self.on_cancel = None
+
+        if "mode" in kwargs:
+            self.mode = kwargs["mode"]
+
+            if self.mode == "open":
+                self.confirm_btn.text = "Open"
+
+            elif self.mode == "save":
+                self.confirm_btn.text = "Save"
+
+            elif self.mode == "dir":
+                self.confirm_btn.text = "Choose"
+
+        if "path" in kwargs:
+            self.files.path = kwargs["path"]
+
+        if "filename" in kwargs:
+            self.filename.text = kwargs["filename"]
+
+        if "on_confirm" in kwargs:
+            self.on_confirm = kwargs["on_confirm"]
+
+        if "on_cancel" in kwargs:
+            self.on_cancel = kwargs["on_cancel"]
+
+        if kivy.platform == "android":
+            self.files.root = get_external_storage_path()
+            self.files.path = self.files.root
+
+    def confirm(self):
+        """Confirm the selected file/dir."""
+        if self.mode == "open" and len(self.files.selection) == 1:
+            if self.on_confirm is not None:
+                self.on_confirm(self)
+
+            self.dismiss()
+
+        elif self.mode == "save" and self.filename.text != "":
+            if self.on_confirm is not None:
+                self.on_confirm(self)
+
+            self.dismiss()
+
+        else:
+            if self.on_confirm is not None:
+                self.on_confirm(self)
+
+            self.dismiss()
+
+    def cancel(self):
+        """Cancel file/dir selection."""
+        self.dismiss()
+
+    def get_path(self):
+        """Get the current file/dir."""
+        if self.mode == "open" and len(self.files.selection) == 1:
+            return self.files.selection[0]
+
+        elif self.mode == "save" and self.filename.text != "":
+            return os.path.join(self.files.path, self.filename.text)
+
+        else:
+            return self.files.path
+
+ Yep. It's quite a bit larger, but it is similar to our other dialog. "cancel" is
+the same as the last dialog, but let's look at "confirm":
+
+def confirm(self):
+    """Confirm the selected file/dir."""
+    if self.mode == "open" and len(self.files.selection) == 1:
+        if self.on_confirm is not None:
+            self.on_confirm(self)
+
+        self.dismiss()
+
+    elif self.mode == "save" and self.filename.text != "":
+        if self.on_confirm is not None:
+            self.on_confirm(self)
+
+        self.dismiss()
+
+    else:
+        if self.on_confirm is not None:
+            self.on_confirm(self)
+
+        self.dismiss()
+
+ This time our "confirm" method validates the selection in our dialog. It has 3
+cases where the selection is valid. If any of the 3 are true, it calls the
+"on_confirm" method if it isn't None and then it dismisses the dialog. But what 
+is this whole "mode" business anyway? Let's look at the constructor:
+
+def __init__(self, **kwargs):
+    """Setup this file dialog."""
+    super(FileDialog, self).__init__()
+    self.on_confirm = None
+    self.on_cancel = None
+
+    if "mode" in kwargs:
+        self.mode = kwargs["mode"]
+
+        if self.mode == "open":
+            self.confirm_btn.text = "Open"
+
+        elif self.mode == "save":
+            self.confirm_btn.text = "Save"
+
+        elif self.mode == "dir":
+            self.confirm_btn.text = "Choose"
+
+    if "path" in kwargs:
+        self.files.path = kwargs["path"]
+
+    if "filename" in kwargs:
+        self.filename.text = kwargs["filename"]
+
+    if "on_confirm" in kwargs:
+        self.on_confirm = kwargs["on_confirm"]
+
+    if "on_cancel" in kwargs:
+        self.on_cancel = kwargs["on_cancel"]
+
+    if kivy.platform == "android":
+        self.files.root = get_external_storage_path()
+        self.files.path = self.files.root
+
+ Basically, "mode" determines whether our file dialog is an open, save, or 
+directory chooser dialog. As you can see, it can understand the "mode", "path",
+"filename", "on_confirm", and "on_cancel" keyword args. The mode affects the text 
+on the confirm button. The "path" keyword arg sets the initial direcory the file 
+list will show the contents of. The "filename" keyword arg sets the filename that
+will be displayed initially. "on_confirm" and "on_cancel" are similar to the ones 
+for our other dialog, but this time we store them ourselves to call later when 
+needed. Also notice the last if block. It is only executed on Android devices.
+The purpose of that code is to set the root and current paths to the external 
+app storage path on an Android device. It utilizes a small storage module that I
+have written.
+
+ Now let's look at the "get_path" method:
+
+def get_path(self):
+    """Get the current file/dir."""
+    if self.mode == "open" and len(self.files.selection) == 1:
+        return self.files.selection[0]
+
+    elif self.mode == "save" and self.filename.text != "":
+        return os.path.join(self.files.path, self.filename.text)
+
+    else:
+        return self.files.path
+
+ If the mode is "open" and there is a file selected in the file list, this method
+returns the first item in the selection. If the mode is save and the filename is
+not an empty string, it joins the path to the dir and the filename and returns
+the resulting path. Otherwise, it returns the current dir.
+
+ Now let's take a look at our new main screen rule:
+
+<MainScreen>:
+    orientation: "vertical"
+    document: Document
+
+    ActionBar:
+        ActionView:
+            ActionPrevious:
+                title: "Notebook"
+                on_press: root.document.do_undo()
+
+            ActionButton:
+                icon: "./data/icons/new.png"
+                on_press: root.prep_new()
+
+            ActionButton:
+                icon: "./data/icons/open.png"
+                on_press: root.prep_open()
+
+            ActionButton:
+                icon: "./data/icons/save.png"
+                on_press: root.prep_save()
+
+    TextInput:
+        id: Document
+        font_size: dp(18)
+        use_bubble: True
+        on_focus: root.adjust_layout(*args)
+
+    Widget:
+        id: Filler
+        size_hint_y: .0001
+
+ This time our main screen is pretty simple. It is a vertical box layout with a
+"document" property that refers to our text input widget. We do have a few new
+widgets though: "ActionBar", "ActionView", "ActionPrevious", and "ActionButton". 
+An action bar is a strip that you can put buttons on. An action bar must contain
+an action view and an action view must contain an "ActionPrevious" widget.
+"ActionPrevious" displays the icon and title of the app and contains a back
+button. In this lesson, our back button calls the "do_undo" method of the text
+widget which undoes your last edit to the text inside it. An action button, is
+a button that is designed to be placed inside an action view. As you can see, we
+have 3 buttons on our action bar. Each one needs an icon, so I have prepared 3
+small icons and saved them as .png files. Also notice the new property we used
+in our text input. "font_size" sets the size of the text inside the widget.
+It accepts various units of measure for the text. In this case we will use "dp".
+We also added an "on_focus" listener. The reason for this, is because on an
+Android device we need to adjust the layout of our app when the virtual keyboard
+is opened or closed. Inside a listener, the "args" variable contains the
+parameters that were passed to the listener. The expression "*args" passes them
+as parameters to our "adjust_layout" method. Then we have a simple "do nothing"
+widget that acts as a placeholder for the empty space underneath the virtual
+keyboard. Let me also point out that we have set the "use_bubble" property of our
+text input to True. That will enable the bubble that displays cut, copy, paste,
+etc. when our app is running on a PC.
+
+ Now let's look at our main screen class:
+
+class MainScreen(BoxLayout):
+    """The main screen of our app."""
+    def __init__(self, **kwargs):
+        """Setup this app."""
+        super(MainScreen, self).__init__(**kwargs)
+        self.filename = "./tmp"
+        self.popup = None
+
+    def prep_new(self):
+        """Prepare to create a new document."""
+        msg_dlg = ConfirmDialog(
+            msg = "Changes to the current document will be lost. Create new document?", 
+            on_confirm = self.new
+            )
+        msg_dlg.open()
+
+    def new(self, sender):
+        """Create a new document."""
+        self.document.text = ""
+
+    def prep_open(self):
+        """Prepare to open a document."""
+        open_dlg = FileDialog(
+            mode = "open", 
+            path = os.path.dirname(self.filename), 
+            filename = os.path.basename(self.filename),
+            on_confirm = self.open
+            )
+        open_dlg.open()
+
+    def open(self, sender):
+        """Open a document."""
+        self.filename = sender.get_path()
+
+        try:
+            with open(self.filename, "r") as f:
+                self.document.text = f.read()
+
+        except IOError:
+            content = BoxLayout(orientation = "vertical")
+            content.add_widget(Label(text = "Failed to open file '{}'".format(
+                self.filename)))
+            content.add_widget(Button(
+                text = "OK", 
+                size_hint_y = .125, 
+                on_press = self.dismiss_popup
+                ))
+            self.popup = Popup(title = "Error", content = content)
+            self.popup.open()
+
+    def prep_save(self):
+        """Prepare to save the current document."""
+        save_dlg = FileDialog(
+            mode = "save", 
+            path = os.path.dirname(self.filename), 
+            filename = os.path.basename(self.filename),
+            on_confirm = self.save
+            )
+        save_dlg.open()
+
+    def save(self, sender):
+        """Save the current document."""
+        self.filename = sender.get_path()
+
+        try:
+            with open(self.filename, "w") as f:
+                f.write(self.document.text)
+
+        except IOError:
+            content = BoxLayout(orientation = "vertical")
+            content.add_widget(Label(text = "Failed to save file '{}'".format(
+                self.filename)))
+            content.add_widget(Button(
+                text = "OK", 
+                size_hint_y = .125, 
+                on_press = self.dismiss_popup
+                ))
+            self.popup = Popup(title = "Error", content = content)
+            self.popup.open()
+
+    def dismiss_popup(self, sender):
+        """Dismiss the current popup."""
+        self.popup.dismiss()
+
+    def adjust_layout(self, sender, has_focus):
+        """Adjust the layout of the app when the virtual keyboard is
+        opened/closed.
+        """
+        if platform != "android":
+            return
+
+        if has_focus:
+            self.document.size_hint_y = .33
+            self.ids["Filler"].size_hint_y = .66
+
+        else:
+            self.document.size_hint_y = .9999
+            self.ids["Filler"].size_hint_y = .0001
+
+ Whoa! That's a big one eh? Let's start with the constructor since it is one of 
+the simplest methods. All the constructor does is call the base constructor and 
+create 2 properties called "filename" and "popup". To better understand what the
+other methods do, let's walk through what each action button does:
+
+new button -> prep_new -> confirm dialog -> new
+open button -> prep_open -> file dialog -> open
+save button -> prep_save -> file dialog -> save
+
+ As you can see, each button calls a corresponding "prep" method which displays
+the appropriate dialog. Then when the user clicks the confirm button, the method
+that corresponds to the operation to be performed gets called. Most of the code
+is similar, so I will only go into detail about a few things.
+
+ Notice the try-except block in "open":
+
+try:
+    ...
+
+except IOError:
+    content = BoxLayout(orientation = "vertical")
+    content.add_widget(Label(text = "Failed to open file '{}'".format(
+        self.filename)))
+    content.add_widget(Button(
+        text = "OK", 
+        size_hint_y = .125, 
+        on_press = self.dismiss_popup
+        ))
+    self.popup = Popup(title = "Error", content = content)
+    self.popup.open()
+
+ An IOError occurs if the file we try to open cannot be opened. In this case, we
+used a popup to alert the user about the error. A popup is based on a modal view
+widget and it is used to display info in a similar way. However, we created the
+popup and its content via the code this time. There are times when it is
+necessary to create widgets via code. The constructor of each widget accepts
+keyword arguments with the same names as its properties. The "add_widget" method
+is used to add a child widget to the given widget. Once we have created the
+content for the popup, we need to pass the title and content to its constructor.
+Then we call the "open" method of the popup to display it. Notice that we have
+a "dismiss_popup" method to close the popup:
+
+def dismiss_popup(self, sender):
+    """Dismiss the current popup."""
+    self.popup.dismiss()
+
+ And we bind it to the "on_press" event of the "OK" button in our popup.
+
+ The other concept I want to point out here is this:
+
+with open(self.filename, "w") as f:
+    f.write(self.document.text)
+
+ If we open a file in write mode, we can call its "write" method to write data to
+the file.
+
+ Lastly, there is our "adjust_layout" method:
+
+def adjust_layout(self, sender, has_focus):
+    """Adjust the layout of the app when the virtual keyboard is
+    opened/closed.
+    """
+    if platform != "android":
+        return
+
+    if has_focus:
+        self.document.size_hint_y = .33
+        self.ids["Filler"].size_hint_y = .66
+
+    else:
+        self.document.size_hint_y = .9999
+        self.ids["Filler"].size_hint_y = .0001
+
+ First off, this method will immediately return if the platform isn't Android.
+If you look at the top, you will see where I have imported "platform" from
+"kivy.utils". If the text input gained focus, we will shrink it and enlarge the
+"filler" widget. And if the text input lost focus, we will simply restore the
+original layout.

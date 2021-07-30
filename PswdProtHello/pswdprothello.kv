@@ -1,0 +1,36 @@
+<MainScreen>:
+    Screen:
+        name: "LoginForm"
+
+        BoxLayout:
+            orientation: "vertical"
+
+            TextInput:
+                id: UsernameInput
+                hint_text: "Username"
+                multiline: False
+
+            TextInput:
+                id: PasswordInput
+                hint_text: "Password"
+                multiline: False
+                password: True
+
+            Button:
+                text: "Login"
+                on_press: root.do_login()
+
+    Screen:
+        name: "MsgDialog"
+
+        BoxLayout:
+            orientation: "vertical"
+
+            Label:
+                id: MsgLbl
+                text: ""
+
+            Button:
+                size_hint_y: .25
+                text: "OK"
+                on_press: root.current = "LoginForm"

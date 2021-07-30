@@ -1,0 +1,289 @@
+Lesson 4: Compound Layouts
+==========================
+
+ So far we have only made apps with simple layouts. In this lesson we are going
+to learn how to create more complex layouts by nesting simple ones. "nesting" is
+when we place a widget inside another widget. A great example of a complex layout
+is a calculator. A calculator has 2 main parts: display and keypad. The display
+can be represented by a text input widget, but what about the keypad? There isn't
+a "calculator keypad" widget in Kivy. However, we can make our own by creating
+a grid of buttons. The "GridLayout" widget will work great for this. Let's take
+a look at the kv file for our calculator:
+
+<MainScreen>:
+    orientation: "vertical"
+    display: Display
+
+    TextInput:
+        id: Display
+        text: ""
+        size_hint_y: .125
+        readonly: True
+
+    GridLayout:
+        rows: 5
+        cols: 4
+
+        Button:
+            text: "Store"
+            on_press: root.store()
+
+        Button:
+            text: "Load"
+            on_press: root.load()
+
+        Button:
+            text: "Clear"
+            on_press: root.display.text = ""
+
+        Button:
+            text: "+"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "7"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "8"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "9"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "-"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "4"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "5"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "6"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "*"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "1"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "2"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "3"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "/"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "0"
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "."
+            on_press: root.display.text += self.text
+
+        Button:
+            text: "Del"
+            on_press: root.display.text = root.display.text[:-1]
+
+        Button:
+            text: "="
+            on_press: root.solve()
+
+ Let's take a closer look at these lines:
+
+display: Display
+
+TextInput:
+    id: Display
+    text: ""
+    size_hint_y: .125
+    readonly: True
+
+ Most of this should look familiar, but there are 2 new concepts I need to
+explain. For starters, notice how I set the "display" property of the main 
+screen to "Display"? Doing this adds a new property to the main screen widget
+and stores a reference to the widget with the "Display" ID into it. This will
+allow use to access the display widget more easily. The readonly property of a
+text input widget controls whether the text inside it can be edited.
+
+ Now let's take a look at the first few lines of our grid layout:
+
+GridLayout:
+    rows: 5
+    cols: 4
+
+ The "rows" and "cols" properties determine how many rows and columns our grid
+layout has. Within a grid layout, the widgets must be defined one row at a time
+from left to right.
+
+ As you can see, each button has its own "on_press" listener. The number and
+operator keys have a simple listener like this:
+
+on_press: root.display.text += self.text
+
+ That code simply adds the text on the button "self.text" onto the end of the
+text on the display "root.display.text". The clear key simply sets the display
+text to an empty string:
+
+on_press: root.display.text = ""
+
+ The del key removes the last char on the display by creating something called a
+"slice" and assigning it to the display:
+
+on_press: root.display.text = root.display.text[:-1]
+
+ "[:-1]" means "all chars starting from the beginning and up to the char 1
+position before the end". The rest of the buttons need more that one line of code
+to do their job. Therefore, I have created a method for each to call: store, 
+load, and solve. Let's take a look at our new "MainScreen" class:
+
+class MainScreen(BoxLayout):
+    """The main screen for our app."""
+    display = ObjectProperty(None)
+
+    def __init__(self, **kwargs):
+        """Setup this screen."""
+        super(MainScreen, self).__init__(**kwargs)
+        self.stack = []
+
+    def store(self):
+        """Push the result of the current equation onto the stack."""
+        try:
+            self.stack.append(eval(self.display.text))
+            self.display.text = ""
+
+        except ValueError:
+            self.display.text = "Error"
+
+    def load(self):
+        """Pop the top of the stack and add it to the end of the current
+        equation.
+        """
+        try:
+            self.display.text += str(self.stack.pop())
+
+        except Exception:
+            pass
+
+    def solve(self):
+        """Solve the current math equation and display the result."""
+        try:
+            self.display.text = str(eval(self.display.text))
+
+        except ValueError:
+            self.display.text = "Error"
+
+ Since this app only needs one screen, I have based the new main screen class on
+a box layout again. But let's take a look at this line:
+
+display = ObjectProperty(None)
+
+ What's this? Remember the display property in our kv file? This is where it's
+defined in our code. The "ObjectProperty" class is basically a container for
+an arbitrary Python object. To use it, we need this import:
+
+from kivy.properties import ObjectProperty
+
+ Notice that this time we have defined a constructor for our class:
+
+def __init__(self, **kwargs):
+    """Setup this screen."""
+    super(MainScreen, self).__init__(**kwargs)
+    self.stack = []
+
+ Be careful when defining your own constructor. If you do so, you must use the
+"super" function to call the constructor of the base class like I did in the
+example. We also created a "stack" property. It will be used by the load and
+store methods. The "store" method looks like this:
+
+def store(self):
+    """Push the result of the current equation onto the stack."""
+    try:
+        self.stack.append(eval(self.display.text))
+        self.display.text = ""
+
+    except ValueError:
+        self.display.text = "Error"
+
+ The "eval" function solves a math equation stored as a string and returns the
+result. The "append" method of a Python list adds an object to the end of the
+list. After storing the result, we clear the display. However, I'm sure you are
+wondering what "try" and "except" are for. If we pass an invalid equation to the
+"eval" function, it will raise an exception. And exception is a type of error.
+In this case, "eval" can raise a "ValueError". If an exception is not handled,
+our app will crash. To handle an exception we use a try and except block. Here
+is the format:
+
+try:
+    #code that may raise an exception
+
+except exception:
+    #code to handle the exception
+
+ Now let's take a look at our "load" method:
+
+def load(self):
+    """Pop the top of the stack and add it to the end of the current
+    equation.
+    """
+    try:
+        self.display.text += str(self.stack.pop())
+
+    except Exception:
+        pass
+
+ The "load" method pops the last answer off the stack, converts it to a string,
+and adds it to the end of the display text. I bet you are wondering why we need
+to convert the answer to a string? Let me show you:
+
+5 == "5"
+
+ If you execute the above code, it will return False. This is because the value
+on the left is an integer, but the value on the right is a string. The data type
+is different. Math operations work differently too:
+
+5 + 5 = 10
+"5" + "5" = "55"
+
+ See what I mean? You can use the "str" function to convert an integer to a 
+string. And likewise, you can use "int" to convert a string to an integer. If
+you have a number with a decimal point, you must convert it to a float if you
+don't want to lose the fractional part. A float is a number with a fractional
+part:
+
+9.2 == float("9.2")
+
+ The above code would return True because we converted the right operand to a
+float before comparing the 2 values.
+
+ Now I will explain the "pass" keyword. Every block in Python cannot be empty.
+However, the "pass" keyword does nothing. Therefore, we can use it in a block
+that needs to be empty.
+
+ The "solve" method should be easy to understand:
+
+def solve(self):
+    """Solve the current math equation and display the result."""
+    try:
+        self.display.text = str(eval(self.display.text))
+
+    except ValueError:
+        self.display.text = "Error"
+
+ Notice how it sets the display text to "Error" if the equation cannot be solved.
+The rest of the code is mostly the same as before.

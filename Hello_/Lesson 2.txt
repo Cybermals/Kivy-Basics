@@ -1,0 +1,125 @@
+Lesson 2: Getting Input
+=======================
+
+ Most apps will need to get input from the user, especially when they are a GUI
+app. In this lesson, we will improve our app so that it can say hello to the
+current user.
+
+ First, let's take a look at the second import statement:
+
+from kivy.uix.boxlayout import BoxLayout
+
+ A "BoxLayout" widget is used to arrange other widgets in a row or column. If its
+orientation is "horizontal" it will arrange the child widgets in a row. If its
+orientation is "vertical" it will arrange the child widgets in a column instead.
+A child widget is a widget that belongs to another widget. Child widgets appear
+inside their parent widget.
+
+ Now take a look at out new "MainScreen" class:
+
+class MainScreen(BoxLayout):
+    """The main screen of this app."""
+    def say_hello(self):
+        """Say hello to the user."""
+        self.ids["MsgLbl"].text = "Hello {}!".format(self.ids["NameInput"].text)
+
+ As you can see, it is based on the "BoxLayout" class. It also has a "say_hello"
+method. We will come back to the "say_hello" method a bit later. Let's take a
+look at our new app class:
+
+class HelloApp(App):
+    """A basic Kivy app."""
+    def build(self):
+        """Build the GUI."""
+        return MainScreen()
+
+ As you can see, we are using "MainScreen" as the root widget this time. Other
+than that, there isn't much more in our new program. But wait... the only widget
+we defined was a box layout with a "say_hello" method? Weren't we supposed to be 
+making an app that says hello to the current user? How can we display our message
+with just a box layout? It's time that I introduced you to a new concept called 
+kv language:
+
+<MainScreen>:
+    orientation: "vertical"
+
+    Label:
+        id: MsgLbl
+        text: ""
+
+    TextInput:
+        id: NameInput
+        hint_text: "Name"
+        multiline: False
+
+    Button:
+        text: "Say Hello"
+        on_press: root.say_hello()
+
+ I bet you are thinking "What in the world is that!?". kv language is a special
+language used to create a GUI layout for a Kivy app. It allows us to create even
+complex layouts with less code. A kv file consists of a series of rules. Each
+rule modifies a class in our code. The format for a kv rule is:
+
+<ClassName>:
+    #kv code
+
+ Let's take a look at the first line of our new kv file:
+
+<MainScreen>:
+
+ This rule modifies our "MainScreen" class. Now let's take a look at the first
+line of our "MainScreen" rule:
+
+orientation: "vertical"
+
+ Remember how our "MainScreen" class was based on the "BoxLayout" class? This
+property affects the direction that it lines up the child widgets. Let's
+continue to the next few lines:
+
+Label:
+    id: MsgLbl
+    text: ""
+
+ This part defines a label with an id of "MsgLbl" and containing the text "".
+Since we defined this widget inside our "MainScreen" rule, it will be a child
+widget that belongs to our "MainScreen" class. The "id" property allows us to
+give a widget a name that we can use to access it via our code. And the "text"
+property sets the text that the label will display. Let's look at the next
+part:
+
+TextInput:
+    id: NameInput
+    hint_text: "Name"
+    multiline: False
+
+ This defines a text input widget with an id of "NameInput", hint text of "Name",
+and disables multiline mode. Hint text is a bit of text that will be displayed
+when the text input widget is empty in order to give the user an idea of what
+they should type in the box. Multiline mode allows the text input widget to
+display multiple lines of text instead of just one. However, we only want one
+line of text this time. Now for the final part:
+
+Button:
+    text: "Say Hello"
+    on_press: root.say_hello()
+
+ This defines a button with the text "Say Hello" and an "on_press" listener that
+calls "root.say_hello". An "on_press" listener executes the code it contains
+when the button has been clicked. Notice that this time we didn't define an id.
+This is because we will not need to access the button from our code. All we need
+it to do is call the "root.say_hello" method when clicked.
+
+ Now that we have taken a look at the kv code for our app, let's go back to the
+"say_hello" method of our "MainScreen" class:
+
+def say_hello(self):
+    """Say hello to the user."""
+    self.ids["MsgLbl"].text = "Hello {}!".format(self.ids["NameInput"].text)
+
+ Remember, this method gets called when the user clicks our "Say Hello" button.
+The "ids" property of a widget class is a dictionary containing all it's child
+widgets that have an id. The code inside our "say_hello" method fetches the text
+inside our "NameInput" widget, inserts it into this string "Hello {}!", and 
+stores it into our "MsgLbl" widget's "text" property. The end result? Our "MsgLbl"
+widget will contain the message we wanted to tell the user.

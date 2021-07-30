@@ -1,0 +1,3 @@
+title = Hello
+author = DylanCheetah
+orientation = portrait

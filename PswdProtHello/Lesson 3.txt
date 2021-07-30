@@ -1,0 +1,148 @@
+Lesson 3: Managing Screens
+==========================
+
+ In the previous lesson, we wrote an app that said hello to the user. However,
+we displayed all the widgets at once. Most of the time it is necessary to design
+an app so that we can show/hide various widgets so that the screen isn't all
+cluttered. We could manually show/hide each widget, but there is a better way.
+Kivy has a widget called "ScreenManager". The "ScreenManager" widget makes it
+much easier to show/hide entire groups of widgets. Each group of widgets has a
+parent widget called a "Screen" and each screen widget is a child of the screen
+manager. Let's start by taking a look at the second import statement:
+
+from kivy.uix.screenmanager import ScreenManager
+
+ This simply imports the "ScreenManager" widget. Notice how this time our
+"MainScreen" class is based on the "ScreenManager" widget:
+
+class MainScreen(ScreenManager):
+    """The main screen for our app."""
+    def login(self, name, pswd):
+        """Log into this app."""
+        return name == "Dylan" and pswd == "cheetah"
+
+    def say_hello(self):
+        """Say hello to the current user."""
+        self.ids["MsgLbl"].text = "Hello {}!".format(
+            self.ids["UsernameInput"].text)
+        self.current = "MsgDialog"
+
+    def access_denied(self):
+        """Display our access denied message."""
+        self.ids["MsgLbl"].text = "***Access Denied***"
+        self.current = "MsgDialog"
+
+    def do_login(self):
+        """Attempt to login and say hello to the current user."""
+        if self.login(self.ids["UsernameInput"].text, 
+            self.ids["PasswordInput"].text):
+            self.say_hello()
+
+        else:
+            self.access_denied()
+
+ As you can see, we have also added some new methods. Basically, this app will
+be designed so that there are 2 screens: "LoginForm" and "MsgDialog". The
+"LoginForm" screen will have 3 widgets: a username text input, a password text
+input, and a login button. The "MsgDialog" screen will have 2 widgets: a label to
+display a message and an OK button. When the user clicks the login button, the
+username and password will be checked. If they are valid, the message dialog
+screen will be used to say hello to the user. Otherwise, the message dialog
+screen will be used to display our access denied message. And when the user
+clicks the OK button on the message dialog screen, the app will return to the
+login screen.
+
+ Let's take a look at our new kv file:
+
+<MainScreen>:
+    Screen:
+        name: "LoginForm"
+
+        BoxLayout:
+            orientation: "vertical"
+
+            TextInput:
+                id: UsernameInput
+                hint_text: "Username"
+                multiline: False
+
+            TextInput:
+                id: PasswordInput
+                hint_text: "Password"
+                multiline: False
+                password: True
+
+            Button:
+                text: "Login"
+                on_press: root.do_login()
+
+    Screen:
+        name: "MsgDialog"
+
+        BoxLayout:
+            orientation: "vertical"
+
+            Label:
+                id: MsgLbl
+                text: ""
+
+            Button:
+                size_hint_y: .25
+                text: "OK"
+                on_press: root.current = "LoginForm"
+
+ Notice that our 2 screens are within the "MainScreen" rule. Each of them has a
+unique name as well. And the widgets that we want on each screen are defined
+within the screen that they should be on. Let's take a look at the second text
+input on the first screen though:
+
+TextInput:
+    id: PasswordInput
+    hint_text: "Password"
+    multiline: False
+    password: True
+
+ Notice how we set the "password" property to True? That will cause this text
+input to display "*" chars so the password isn't visible. Let's also take a look
+at the button on the second screen:
+
+Button:
+    size_hint_y: .25
+    text: "OK"
+    on_press: root.current = "LoginForm"
+
+ The "size_hint_y" property indicates what percentage of the height inside the
+layout should be occupied by a widget. There is also a "size_hint_x" and
+"size_hint" property that can be used. But this time, we only need one of the
+three. Notice that clicking the login button calls "root.do_login". Let's take a
+look at that method in our code:
+
+def do_login(self):
+    """Attempt to login and say hello to the current user."""
+    if self.login(self.ids["UsernameInput"].text, 
+        self.ids["PasswordInput"].text):
+        self.say_hello()
+
+    else:
+        self.access_denied()
+
+ Our "do_login" method calls our "login" method and passes the username and
+password to it. If it returns true, it will call our "say_hello" method.
+Otherwise, it will call our "access_denied" method. The "login" method simply
+compares the given username and password with the correct ones and returns the
+result: True or False. Let's take a look at the "say_hello" method though:
+
+def say_hello(self):
+    """Say hello to the current user."""
+    self.ids["MsgLbl"].text = "Hello {}!".format(
+        self.ids["UsernameInput"].text)
+    self.current = "MsgDialog"
+
+ This first part should look familiar, but the second line is a new concept. The
+second line sets the current screen to "MsgDialog". Our "access_denied" method
+does something similar, but it displays the "***Access Denied***" message
+instead. Now let's take a look at the "on_press" listener of our OK button:
+
+on_press: root.current = "LoginForm"
+
+ This line switches back to our "LoginForm" screen.

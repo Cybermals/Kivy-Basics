@@ -1,0 +1,26 @@
+Lesson 1: Basic Kivy App
+========================
+
+ In this series of tutorials, I will be teaching you how to make GUI apps with
+Kivy. Kivy is an open-source cross-platform hardware-accelerated multi-touch GUI
+framework for Python. Let's start by taking a look at our import statements:
+
+from kivy.app import App
+from kivy.uix.label import Label
+
+ The first one imports the Kivy app class and the second one imports the Label
+class. Every Kivy app must define an app class that extends the Kivy app class:
+
+class HelloApp(App):
+    """A basic Kivy app."""
+    def build(self):
+        """Build the UI."""
+        return Label(text = "Hello World!")
+
+ Our app class must override the "build" method of the Kivy app class. The 
+"build" method must return the root widget for our app. In this lesson, we will
+simply return a label widget containing the text "Hello World!".
+
+ We also need to create an instance of our app class and call its "run" method:
+
+HelloApp().run()
